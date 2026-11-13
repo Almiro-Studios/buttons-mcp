@@ -82,6 +82,10 @@ def code_block(text):
 def page(key, c):
     n = html.escape(c["name"])
     steps = []
+    steps.append(f"""<li><h2>Have Buttons running</h2>
+<p>You need an Elgato Stream Deck Studio controlled by <a href="https://bitfocus.io/buttons">Bitfocus Buttons</a>.
+<a href="https://user.bitfocus.io/download">Download Buttons</a>, create the admin user at <code>https://localhost:4443</code>,
+add the Studio under Connect → Surface and create a Position. <a href="{REPO}#before-you-start">Full setup steps</a>.</p></li>""")
     steps.append(f"""<li><h2>Install the binary</h2>
 <p>Download <code>buttons-mcp</code> for your OS from <a href="{REPO}/releases/latest">Releases</a> and put it on your <code>PATH</code>, or build it with Go:</p>
 {code_block("go install github.com/Almiro-Studios/buttons-mcp/cmd/buttons-mcp@latest")}</li>""")
@@ -113,7 +117,7 @@ def page(key, c):
 <body>
 <main>
 <h1>buttons-mcp for {n}</h1>
-<p class="muted">Control Bitfocus Buttons (Stream Deck Studio) layouts from {n}. <a href="{REPO}#readme">About the project</a></p>
+<p class="muted">Control your Elgato Stream Deck Studio through Bitfocus Buttons from {n}. <a href="{REPO}#readme">About the project</a></p>
 <ol>
 {''.join(steps)}
 </ol>

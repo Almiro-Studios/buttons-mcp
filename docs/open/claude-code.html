@@ -29,9 +29,12 @@ code{font-size:.9em}
 <body>
 <main>
 <h1>buttons-mcp for Claude Code</h1>
-<p class="muted">Control Bitfocus Buttons (Stream Deck Studio) layouts from Claude Code. <a href="https://github.com/Almiro-Studios/buttons-mcp#readme">About the project</a></p>
+<p class="muted">Control your Elgato Stream Deck Studio through Bitfocus Buttons from Claude Code. <a href="https://github.com/Almiro-Studios/buttons-mcp#readme">About the project</a></p>
 <ol>
-<li><h2>Install the binary</h2>
+<li><h2>Have Buttons running</h2>
+<p>You need an Elgato Stream Deck Studio controlled by <a href="https://bitfocus.io/buttons">Bitfocus Buttons</a>.
+<a href="https://user.bitfocus.io/download">Download Buttons</a>, create the admin user at <code>https://localhost:4443</code>,
+add the Studio under Connect → Surface and create a Position. <a href="https://github.com/Almiro-Studios/buttons-mcp#before-you-start">Full setup steps</a>.</p></li><li><h2>Install the binary</h2>
 <p>Download <code>buttons-mcp</code> for your OS from <a href="https://github.com/Almiro-Studios/buttons-mcp/releases/latest">Releases</a> and put it on your <code>PATH</code>, or build it with Go:</p>
 <div class="code"><pre>go install github.com/Almiro-Studios/buttons-mcp/cmd/buttons-mcp@latest</pre><button class="copy" type="button">Copy</button></div></li><li><h2>Log in to Buttons</h2>
 <p>Saves your Buttons username and password in the system keychain. Run once:</p>

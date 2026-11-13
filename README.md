@@ -7,9 +7,22 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-server-8A2BE2)](https://modelcontextprotocol.io)
 
-An [MCP](https://modelcontextprotocol.io) server for [Bitfocus Buttons](https://bitfocus.io/buttons), the control software for Stream Deck Studio and other surfaces. It lets an AI assistant (Claude, Cursor, …) build and edit your layouts: put live values on keys, and colour them by load.
+An [MCP](https://modelcontextprotocol.io) server for the **[Elgato Stream Deck Studio](https://www.elgato.com/stream-deck-studio)** running **[Bitfocus Buttons](https://bitfocus.io/buttons)**. It lets an AI assistant (Claude, Cursor, …) build and edit your layouts: put live values on keys, colour them by load, and make keys trigger actions (ATEM cuts, routing, streaming).
 
 > **Unofficial.** Buttons has no public API. This server talks to the same internal tRPC API the Buttons web UI uses, so it can break when Buttons updates. Tested with Buttons 1.9.1 (beta).
+
+## Before you start
+
+buttons-mcp does not talk to the Stream Deck directly. It controls **Bitfocus Buttons**, the software that drives the Stream Deck Studio, so you need both:
+
+1. **A Stream Deck Studio.** Elgato's 32-key, 2-dial rack unit. It connects over Ethernet (PoE+) or USB-C. Other surfaces that Buttons supports may work too, but the Studio is what this project is built and tested for.
+2. **Bitfocus Buttons, installed and set up:**
+   1. Download it from [user.bitfocus.io/download](https://user.bitfocus.io/download) (free account; the free tier is enough) and install it on a computer on the same network as the Studio.
+   2. Open the Buttons web UI at `https://localhost:4443` (accept the self-signed certificate warning) and create the first admin user. That username and password are what `buttons-mcp login` asks for.
+   3. Add the Studio under **Connect → Surface**. On the network it is discovered automatically (it advertises itself as `Stream Deck Studio …`); you can also enter its IP address.
+   4. Create a **Position** (a layout), assign the Studio surface to it, and click **Apply** once. The MCP tools edit positions, so you need at least one.
+   5. Add the **connections** (modules) you want to control or read from: ATEM, OBS, vMix, Generic File Reader, … under **Connect → Connection**. You can also ask your assistant to do this later with `call_api`.
+3. **The Elgato Stream Deck app is not needed** and should not be paired with the Studio at the same time: Buttons takes control of the device. If the Studio's firmware is too old for Buttons, update it with Bitfocus or Elgato's instructions first.
 
 ## Use with your AI app
 
