@@ -15,10 +15,10 @@ An [MCP](https://modelcontextprotocol.io) server for [Bitfocus Buttons](https://
 
 Each button opens a short setup page: install the binary, run `buttons-mcp login`, add the server (a one-click `cursor://` install for Cursor, a copy-paste command or config for the others), then open the app with a starter prompt prefilled.
 
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://almiro-studios.github.io/buttons-mcp/open/cursor.html)
-[![Use with Claude Code](https://img.shields.io/badge/Use%20with-Claude%20Code-D97757?logo=claude&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/claude-code.html)
-[![Use with Claude Desktop](https://img.shields.io/badge/Use%20with-Claude%20Desktop-D97757?logo=claude&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/claude.html)
-[![Use with Codex](https://img.shields.io/badge/Use%20with-Codex-412991?logo=openai&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/codex.html)
+[![Add to Cursor](https://img.shields.io/badge/Add%20to-Cursor-000000?style=for-the-badge&logo=cursor&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/cursor.html)
+[![Use with Claude Code](https://img.shields.io/badge/Use%20with-Claude%20Code-D97757?style=for-the-badge&logo=claude&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/claude-code.html)
+[![Use with Claude Desktop](https://img.shields.io/badge/Use%20with-Claude%20Desktop-D97757?style=for-the-badge&logo=claude&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/claude.html)
+[![Use with Codex](https://img.shields.io/badge/Use%20with-Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/codex.html)
 
 Already have the binary and login? [Install straight into Cursor](https://cursor.com/link/mcp/install?name=buttons&config=eyJjb21tYW5kIjogImJ1dHRvbnMtbWNwIn0%3D).
 
