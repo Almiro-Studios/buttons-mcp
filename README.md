@@ -20,7 +20,7 @@ Each button opens a short setup page: install the binary, run `buttons-mcp login
 [![Use with Claude Desktop](https://img.shields.io/badge/Use%20with-Claude%20Desktop-D97757?style=for-the-badge&logo=claude&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/claude.html)
 [![Use with Codex](https://img.shields.io/badge/Use%20with-Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/codex.html)
 
-Already have the binary and login? [Install straight into Cursor](https://cursor.com/link/mcp/install?name=buttons&config=eyJjb21tYW5kIjogImJ1dHRvbnMtbWNwIn0%3D).
+Already have the binary and login? [Install straight into Cursor](https://cursor.com/install-mcp?name=buttons&config=eyJjb21tYW5kIjogImJ1dHRvbnMtbWNwIn0%3D).
 
 ## What it can do
 

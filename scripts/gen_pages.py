@@ -32,7 +32,7 @@ CLIENTS = {
         "name": "Cursor",
         "install": {
             "button": f"cursor://anysphere.cursor-deeplink/mcp/install?name={NAME}&config={q(cfg_b64)}",
-            "fallback": f"https://cursor.com/link/mcp/install?name={NAME}&config={q(cfg_b64)}",
+            "fallback": f"https://cursor.com/install-mcp?name={NAME}&config={q(cfg_b64)}",
         },
         "manual": ("Or add this to <code>~/.cursor/mcp.json</code>:", mcp_json),
         "try": f"cursor://anysphere.cursor-deeplink/prompt?text={q(TRY_PROMPT)}",
