@@ -1,3 +1,6 @@
+// Copyright 2026 Almiro Studios
+// SPDX-License-Identifier: MIT
+
 // Package layout edits Buttons position documents (the JSON tree the
 // position editor saves). Documents are kept as generic maps so fields this
 // package does not know about survive a load/save round trip.
@@ -7,6 +10,7 @@ import (
 	"crypto/rand"
 )
 
+// Doc is a JSON object from a layout document.
 type Doc = map[string]any
 
 // Color is a palette entry such as ["green","500"].
@@ -50,6 +54,7 @@ func Find(doc Doc, x, y int) Doc {
 	return nil
 }
 
+// newID returns a random 12-character id like the ones the editor generates.
 func newID() string {
 	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, 12)
@@ -159,23 +164,4 @@ func SetColorRules(b Doc, rules []ColorRule) {
 		fbs = append(fbs, ExpressionFeedback(r.Expression, r.Color))
 	}
 	b["feedbacks"] = fbs
-}
-
-func deepCopy(v any) any {
-	switch t := v.(type) {
-	case map[string]any:
-		m := make(map[string]any, len(t))
-		for k, x := range t {
-			m[k] = deepCopy(x)
-		}
-		return m
-	case []any:
-		s := make([]any, len(t))
-		for i, x := range t {
-			s[i] = deepCopy(x)
-		}
-		return s
-	default:
-		return v
-	}
 }

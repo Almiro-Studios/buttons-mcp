@@ -1,3 +1,6 @@
+// Copyright 2026 Almiro Studios
+// SPDX-License-Identifier: MIT
+
 // Package creds stores the Buttons login in the OS keychain (macOS Keychain,
 // Windows Credential Manager, or the Secret Service on Linux).
 package creds
@@ -16,8 +19,10 @@ import (
 	"golang.org/x/term"
 )
 
+// service is the keychain service name; entries are keyed by server URL.
 const service = "buttons-mcp"
 
+// Login is a Buttons username and password.
 type Login struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -38,11 +43,13 @@ func Load(url string) (Login, error) {
 	return l, err
 }
 
+// Save stores l in the keychain for the Buttons server at url.
 func Save(url string, l Login) error {
 	b, _ := json.Marshal(l)
 	return keyring.Set(service, url, string(b))
 }
 
+// Delete removes the saved login for url.
 func Delete(url string) error { return keyring.Delete(service, url) }
 
 // Prompt asks for username and password, in the terminal when there is one,

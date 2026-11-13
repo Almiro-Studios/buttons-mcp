@@ -1,3 +1,6 @@
+// Copyright 2026 Almiro Studios
+// SPDX-License-Identifier: MIT
+
 // Command buttons-mcp is an MCP server for Bitfocus Buttons. It talks to the
 // same tRPC-over-WebSocket API the Buttons web UI uses.
 package main

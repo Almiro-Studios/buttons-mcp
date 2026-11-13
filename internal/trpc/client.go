@@ -1,3 +1,6 @@
+// Copyright 2026 Almiro Studios
+// SPDX-License-Identifier: MIT
+
 // Package trpc is a minimal client for the tRPC-over-WebSocket API that the
 // Bitfocus Buttons web UI uses (wss://<host>/api/wstrpc). Inputs and outputs
 // use the superjson envelope {"json": ..., "meta": ...}.

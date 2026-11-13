@@ -1,0 +1,26 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: input
+    id: buttons-version
+    attributes:
+      label: Buttons version
+      description: Settings → General in Buttons
+      placeholder: 1.9.1
+    validations:
+      required: true
+  - type: input
+    id: mcp-version
+    attributes:
+      label: buttons-mcp version
+      description: Output of `buttons-mcp version`
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: The tool you called (or what you asked the assistant), what you expected, and what happened instead. Paste errors, but remove passwords and tokens.
+    validations:
+      required: true

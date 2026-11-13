@@ -1,5 +1,12 @@
 # buttons-mcp
 
+[![CI](https://github.com/Almiro-Studios/buttons-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Almiro-Studios/buttons-mcp/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Almiro-Studios/buttons-mcp.svg)](https://pkg.go.dev/github.com/Almiro-Studios/buttons-mcp)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Almiro-Studios/buttons-mcp)](https://goreportcard.com/report/github.com/Almiro-Studios/buttons-mcp)
+[![Release](https://img.shields.io/github/v/release/Almiro-Studios/buttons-mcp)](https://github.com/Almiro-Studios/buttons-mcp/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-server-8A2BE2)](https://modelcontextprotocol.io)
+
 An [MCP](https://modelcontextprotocol.io) server for [Bitfocus Buttons](https://bitfocus.io/buttons), the control software for Stream Deck Studio and other surfaces. It lets an AI assistant (Claude, Cursor, …) build and edit your layouts: put live values on keys, and colour them by load.
 
 > **Unofficial.** Buttons has no public API. This server talks to the same internal tRPC API the Buttons web UI uses, so it can break when Buttons updates. Tested with Buttons 1.9.1 (beta).
@@ -26,13 +33,13 @@ Key text uses Buttons variables, written `$(connectionKey.variable)`, for exampl
 
 ## Install
 
-Requires Go 1.26 or newer.
+Download a binary for macOS, Linux or Windows from [Releases](https://github.com/Almiro-Studios/buttons-mcp/releases) and put `buttons-mcp` on your `PATH`.
+
+Or build it with Go 1.26 or newer:
 
 ```bash
 go install github.com/Almiro-Studios/buttons-mcp/cmd/buttons-mcp@latest
 ```
-
-Or clone and run `make build` to get `bin/buttons-mcp`.
 
 ## Log in once
 
@@ -92,6 +99,12 @@ Use the full path to the binary if `$(go env GOPATH)/bin` is not on the client's
 
 Debugging aid: `buttons-mcp dump -` prints all positions; `buttons-mcp dump <positionId>` prints one saved layout.
 
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md), and please follow the [code of conduct](CODE_OF_CONDUCT.md). Security issues: see [SECURITY.md](SECURITY.md). Release notes: [CHANGELOG.md](CHANGELOG.md).
+
+Not affiliated with or endorsed by Bitfocus. "Bitfocus Buttons" and "Stream Deck" are trademarks of their owners.
+
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 Almiro Studios

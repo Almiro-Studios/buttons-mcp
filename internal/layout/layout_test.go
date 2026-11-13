@@ -1,3 +1,6 @@
+// Copyright 2026 Almiro Studios
+// SPDX-License-Identifier: MIT
+
 package layout
 
 import "testing"
