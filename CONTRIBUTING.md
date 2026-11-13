@@ -31,6 +31,7 @@ bin/buttons-mcp dump <positionId>   # one saved layout document
 | `internal/trpc` | tRPC client: HTTP login plus the WebSocket session. |
 | `internal/layout` | Helpers that edit layout documents (keys, colour rules). |
 | `internal/creds` | Login prompt and OS keychain storage. |
+| `docs/open` | GitHub Pages setup pages per AI client. Generated: edit `scripts/gen_pages.py` and run `python3 scripts/gen_pages.py`. |
 
 ## Guidelines
 

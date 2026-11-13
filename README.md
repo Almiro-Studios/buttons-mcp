@@ -13,15 +13,14 @@ An [MCP](https://modelcontextprotocol.io) server for [Bitfocus Buttons](https://
 
 ## Use with your AI app
 
-One click opens the app with a setup prompt prefilled (you review it before it runs). It installs the server, asks you to run `buttons-mcp login`, adds the MCP config, and shows your layout.
+Each button opens a short setup page: install the binary, run `buttons-mcp login`, add the server (a one-click `cursor://` install for Cursor, a copy-paste command or config for the others), then open the app with a starter prompt prefilled.
 
-[![Use with Cursor](https://img.shields.io/badge/Use%20with-Cursor-000000?logo=cursor&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/cursor.html)
-[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://almiro-studios.github.io/buttons-mcp/open/cursor-mcp.html)
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://almiro-studios.github.io/buttons-mcp/open/cursor.html)
 [![Use with Claude Code](https://img.shields.io/badge/Use%20with-Claude%20Code-D97757?logo=claude&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/claude-code.html)
 [![Use with Claude Desktop](https://img.shields.io/badge/Use%20with-Claude%20Desktop-D97757?logo=claude&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/claude.html)
 [![Use with Codex](https://img.shields.io/badge/Use%20with-Codex-412991?logo=openai&logoColor=white)](https://almiro-studios.github.io/buttons-mcp/open/codex.html)
 
-"Add to Cursor" only registers the server; install the binary and run `buttons-mcp login` first.
+Already have the binary and login? [Install straight into Cursor](https://cursor.com/link/mcp/install?name=buttons&config=eyJjb21tYW5kIjogImJ1dHRvbnMtbWNwIn0%3D).
 
 ## What it can do
 

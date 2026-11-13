@@ -3,27 +3,51 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open buttons-mcp in Claude Code</title>
+<title>buttons-mcp for Claude Code</title>
+<meta name="description" content="Set up the buttons-mcp MCP server for Bitfocus Buttons in Claude Code.">
 <style>
-:root{color-scheme:light dark;--bg:#fff;--fg:#1b1b1f;--muted:#5b5b66;--card:#f4f4f6;--accent:#6d28d9}
-@media (prefers-color-scheme:dark){:root{--bg:#111114;--fg:#ececf1;--muted:#a0a0ab;--card:#1d1d22;--accent:#a78bfa}}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif;padding:48px 16px}
-main{max-width:640px;margin:auto}
-a.button{display:inline-block;background:var(--accent);color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600}
-pre{background:var(--card);padding:16px;border-radius:8px;white-space:pre-wrap;font-size:14px}
-p.muted{color:var(--muted)}
+:root{color-scheme:light dark;--bg:#fff;--fg:#1b1b1f;--muted:#5b5b66;--card:#f4f4f6;--line:#e2e2e8;--accent:#6d28d9;--on-accent:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#111114;--fg:#ececf1;--muted:#a0a0ab;--card:#1d1d22;--line:#2c2c33;--accent:#a78bfa;--on-accent:#111114}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,sans-serif;padding:40px 16px}
+main{max-width:680px;margin:auto}
+h1{font-size:1.6rem;margin:0 0 4px}
+ol{padding-left:0;list-style:none;counter-reset:s}
+ol>li{counter-increment:s;border:1px solid var(--line);border-radius:10px;padding:16px 16px 16px 52px;margin:12px 0;position:relative}
+ol>li::before{content:counter(s);position:absolute;left:16px;top:16px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:.85rem;display:grid;place-items:center}
+h2{font-size:1.05rem;margin:0 0 6px}
+p{margin:6px 0}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+a.button{display:inline-block;background:var(--accent);color:var(--on-accent);padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:600;margin:4px 0}
+.code{position:relative}
+pre{background:var(--card);padding:12px 14px;border-radius:8px;overflow-x:auto;font-size:13.5px;margin:6px 0}
+button.copy{position:absolute;top:6px;right:6px;font:inherit;font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+code{font-size:.9em}
 </style>
 </head>
 <body>
 <main>
-<h1>Opening Claude Code…</h1>
-<p>If nothing happens, make sure Claude Code is installed, then click:</p>
-<p><a class="button" href="claude-cli://open?q=Set%20up%20the%20buttons-mcp%20MCP%20server%20for%20Bitfocus%20Buttons%20%28https%3A%2F%2Fgithub.com%2FAlmiro-Studios%2Fbuttons-mcp%29.%201%29%20Install%20it%3A%20download%20the%20binary%20for%20this%20OS%20from%20https%3A%2F%2Fgithub.com%2FAlmiro-Studios%2Fbuttons-mcp%2Freleases%2Flatest%20and%20put%20buttons-mcp%20on%20my%20PATH%2C%20or%20run%3A%20go%20install%20github.com%2FAlmiro-Studios%2Fbuttons-mcp%2Fcmd%2Fbuttons-mcp%40latest.%202%29%20Tell%20me%20to%20run%20buttons-mcp%20login%20in%20my%20terminal%20to%20save%20my%20Buttons%20username%20and%20password%20in%20the%20keychain%20%28do%20not%20ask%20me%20for%20the%20password%29.%203%29%20Add%20an%20MCP%20server%20named%20buttons%20that%20runs%20the%20command%20buttons-mcp%20to%20this%20app%27s%20MCP%20config.%204%29%20Once%20it%20is%20connected%2C%20call%20list_positions%20and%20list_buttons%20and%20show%20me%20my%20Stream%20Deck%20layout.">Open in Claude Code</a></p>
-<p class="muted">The prompt is only prefilled; you review it before anything runs.</p>
-<h2>Prompt</h2>
-<pre>Set up the buttons-mcp MCP server for Bitfocus Buttons (https://github.com/Almiro-Studios/buttons-mcp). 1) Install it: download the binary for this OS from https://github.com/Almiro-Studios/buttons-mcp/releases/latest and put buttons-mcp on my PATH, or run: go install github.com/Almiro-Studios/buttons-mcp/cmd/buttons-mcp@latest. 2) Tell me to run buttons-mcp login in my terminal to save my Buttons username and password in the keychain (do not ask me for the password). 3) Add an MCP server named buttons that runs the command buttons-mcp to this app&#x27;s MCP config. 4) Once it is connected, call list_positions and list_buttons and show me my Stream Deck layout.</pre>
-<p><a href="https://github.com/Almiro-Studios/buttons-mcp#readme">Back to buttons-mcp</a></p>
+<h1>buttons-mcp for Claude Code</h1>
+<p class="muted">Control Bitfocus Buttons (Stream Deck Studio) layouts from Claude Code. <a href="https://github.com/Almiro-Studios/buttons-mcp#readme">About the project</a></p>
+<ol>
+<li><h2>Install the binary</h2>
+<p>Download <code>buttons-mcp</code> for your OS from <a href="https://github.com/Almiro-Studios/buttons-mcp/releases/latest">Releases</a> and put it on your <code>PATH</code>, or build it with Go:</p>
+<div class="code"><pre>go install github.com/Almiro-Studios/buttons-mcp/cmd/buttons-mcp@latest</pre><button class="copy" type="button">Copy</button></div></li><li><h2>Log in to Buttons</h2>
+<p>Saves your Buttons username and password in the system keychain. Run once:</p>
+<div class="code"><pre>buttons-mcp login</pre><button class="copy" type="button">Copy</button></div></li><li><h2>Add it to Claude Code</h2><p>Run in your terminal:</p><div class="code"><pre>claude mcp add buttons --scope user -- buttons-mcp</pre><button class="copy" type="button">Copy</button></div></li><li><h2>Try it</h2>
+<p>Opens Claude Code with a starter prompt prefilled. You review it before it runs.</p>
+<p><a class="button" href="claude-cli://open?q=Use%20the%20buttons%20MCP%20server%3A%20call%20list_positions%2C%20then%20list_buttons%20for%20my%20first%20position%2C%20and%20describe%20my%20Stream%20Deck%20layout.">Open in Claude Code</a></p></li>
+</ol>
 </main>
-<script>window.location.href = "claude-cli://open?q=Set%20up%20the%20buttons-mcp%20MCP%20server%20for%20Bitfocus%20Buttons%20%28https%3A%2F%2Fgithub.com%2FAlmiro-Studios%2Fbuttons-mcp%29.%201%29%20Install%20it%3A%20download%20the%20binary%20for%20this%20OS%20from%20https%3A%2F%2Fgithub.com%2FAlmiro-Studios%2Fbuttons-mcp%2Freleases%2Flatest%20and%20put%20buttons-mcp%20on%20my%20PATH%2C%20or%20run%3A%20go%20install%20github.com%2FAlmiro-Studios%2Fbuttons-mcp%2Fcmd%2Fbuttons-mcp%40latest.%202%29%20Tell%20me%20to%20run%20buttons-mcp%20login%20in%20my%20terminal%20to%20save%20my%20Buttons%20username%20and%20password%20in%20the%20keychain%20%28do%20not%20ask%20me%20for%20the%20password%29.%203%29%20Add%20an%20MCP%20server%20named%20buttons%20that%20runs%20the%20command%20buttons-mcp%20to%20this%20app%27s%20MCP%20config.%204%29%20Once%20it%20is%20connected%2C%20call%20list_positions%20and%20list_buttons%20and%20show%20me%20my%20Stream%20Deck%20layout.";</script>
+<script>
+document.querySelectorAll('button.copy').forEach(function (b) {
+  b.addEventListener('click', function () {
+    navigator.clipboard.writeText(b.previousElementSibling.textContent).then(function () {
+      b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500);
+    });
+  });
+});
+</script>
 </body>
 </html>
