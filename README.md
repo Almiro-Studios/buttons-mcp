@@ -92,7 +92,7 @@ Use the full path to the binary if `$(go env GOPATH)/bin` is not on the client's
 | `BUTTONS_INSECURE_TLS` | `true` | Accept the self-signed certificate Buttons ships with. Set `false` if you use a trusted certificate. |
 | `BUTTONS_USERNAME` / `BUTTONS_PASSWORD` | — | Override the keychain login. |
 
-## Example: a CI dashboard on a Stream Deck Studio
+## Walkthrough: a CI dashboard on a Stream Deck Studio
 
 1. Write your numbers to files, e.g. `~/.deck-stats/ci_queued.txt`, from a script on a timer.
 2. In Buttons, add a **Generic File Reader** connection per file. Its variable key (e.g. `FileReader`) exposes `$(FileReader.contents)`.
@@ -100,6 +100,23 @@ Use the full path to the binary if `$(go env GOPATH)/bin` is not on the client's
    *"On the Desk position, put `CI $(FileReader.contents)` on key 0,0 and colour it green at 0 to red at 20 queued jobs."*
 
    It calls `set_button`, then `set_load_gradient`.
+
+## Use cases
+
+Things you can ask your assistant once the server is connected. Each needs the matching Buttons connection (module) set up; the assistant can list connections with `list_variables` and add new ones with `call_api` (`connection.add`).
+
+1. **CI and build dashboard.** *"Put the queued GitHub Actions jobs from `$(FileReader.contents)` on key 0,0 and colour it green at 0, red at 20."* Feed numbers from a script into Generic File Reader, Generic HTTP or MQTT connections.
+2. **Live stream health (OBS / vMix).** *"Make a row showing OBS streaming and recording state, dropped frames and CPU; turn the dropped-frames key red above 1%."* Uses the `obs-studio` or `studiocoast-vmix` module variables.
+3. **ATEM program/preview tally.** *"Build a 2×8 grid for ATEM inputs 1–8: program bus on top, preview below, red when on program and green when on preview."* Uses `bmd-atem` variables in colour rules.
+4. **Videohub routing panel.** *"Lay out one key per Videohub output showing which input it is routed from."* Uses `bmd-videohub` routing variables as key text.
+5. **YouTube / Twitch live stats.** *"Show concurrent viewers and stream uptime for my YouTube live event and the Twitch channel, with a gradient from grey to green as viewers grow."* Uses `youtube-live` and `twitch-api`.
+6. **Audio levels and mutes.** *"Show mute state for X32 channels 1–8 and colour muted channels red."* Uses `behringer-x32` or `allenheath-sq`.
+7. **Recording / playback status.** *"Show HyperDeck 1 and 2 transport state and remaining record time; turn the time key orange under 10 minutes and red under 2."* Uses `bmd-hyperdeck`.
+8. **Service and network monitoring.** *"Add keys for our production servers that go red when Generic Ping fails, and show the last speed test."* Uses `generic-ping` and `generic-speedtest`.
+9. **Show-calling with ProPresenter.** *"Show the current and next slide titles and the countdown timer, red under 30 seconds."* Uses `renewedvision-propresenter-api`.
+10. **Studio environment.** *"Show Key Light brightness, Hue scene and room temperature from Home Assistant, and colour the temperature key blue to red."* Uses `elgato-keylight`, `philips-hue` and `homeassistant-server`.
+
+The dedicated tools set key text, colours and colour rules. Making a key **do** something when pressed (cut on the ATEM, route a Videohub input, start a stream) means editing the key's actions in the layout, which today goes through `get_layout` and `call_api` (`positionDocument.save`); a dedicated tool for press actions is planned.
 
 ## How it works
 
