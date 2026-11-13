@@ -2,6 +2,19 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `list_actions` and `set_button_actions` tools: keys can now run connection actions (ATEM cuts, Videohub routes, stream start/stop, …) on press and release.
+- Setup pages per AI client (Cursor, Claude Code, Claude Desktop, Codex) on GitHub Pages, with a `cursor://` MCP install link.
+- Use cases section in the README.
+
+### Fixed
+
+- `call_api` rejected JSON objects as input.
+- Cursor web install link now uses `cursor.com/install-mcp`.
+
 ## [0.1.0] - 2026-11-13
 
 ### Added
@@ -11,4 +24,5 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - `buttons-mcp login` / `logout` with OS keychain storage; terminal prompt or macOS dialog.
 - Safe saves using the layout revision, and automatic re-login when the session expires.
 
+[Unreleased]: https://github.com/Almiro-Studios/buttons-mcp/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Almiro-Studios/buttons-mcp/releases/tag/v0.1.0

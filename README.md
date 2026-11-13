@@ -33,6 +33,8 @@ Already have the binary and login? [Install straight into Cursor](https://cursor
 | `delete_button` | Remove the key at `x`,`y`. |
 | `set_color_rules` | Replace a key's colour rules: each rule sets the background when its expression is true. |
 | `set_load_gradient` | Colour a key from green to red by a numeric variable, in 2–8 steps. |
+| `list_actions` | List the actions each connection offers (switch an ATEM input, route a Videohub, start a stream, …) with option ids, types, defaults and choices. |
+| `set_button_actions` | Set what a key does on press and release: connection actions with option values and delays. |
 | `list_variables` | List connections, to find variables for `$(connection.variable)`. |
 | `call_api` | Call any Buttons API procedure (query or mutation). Covers everything the UI can do that the tools above don't: connections, positions, surfaces, presets, … |
 
@@ -116,7 +118,7 @@ Things you can ask your assistant once the server is connected. Each needs the m
 9. **Show-calling with ProPresenter.** *"Show the current and next slide titles and the countdown timer, red under 30 seconds."* Uses `renewedvision-propresenter-api`.
 10. **Studio environment.** *"Show Key Light brightness, Hue scene and room temperature from Home Assistant, and colour the temperature key blue to red."* Uses `elgato-keylight`, `philips-hue` and `homeassistant-server`.
 
-The dedicated tools set key text, colours and colour rules. Making a key **do** something when pressed (cut on the ATEM, route a Videohub input, start a stream) means editing the key's actions in the layout, which today goes through `get_layout` and `call_api` (`positionDocument.save`); a dedicated tool for press actions is planned.
+Keys can both **show** and **do**: `set_button` and the colour tools handle the display, and `set_button_actions` makes a key cut to an ATEM input, route a Videohub output, start a stream or run any other connection action on press or release. The assistant finds the right action and its options with `list_actions`.
 
 ## How it works
 

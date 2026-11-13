@@ -165,3 +165,57 @@ func SetColorRules(b Doc, rules []ColorRule) {
 	}
 	b["feedbacks"] = fbs
 }
+
+// Action is one step a key runs on press or release.
+type Action struct {
+	ActionID string         `json:"action_id" jsonschema:"action id from list_actions, e.g. <connectionId>:readFile"`
+	Values   map[string]any `json:"values,omitempty" jsonschema:"option values keyed by option id (see list_actions)"`
+	DelayMS  int            `json:"delay_ms,omitempty" jsonschema:"wait this many milliseconds before running"`
+}
+
+// ConnectionAction builds a stored connection action. moduleID is the
+// connection's module id with version, e.g. bmd-atem:3.14.0.
+func ConnectionAction(a Action, connectionID, moduleID string) map[string]any {
+	values := a.Values
+	if values == nil {
+		values = map[string]any{}
+	}
+	return map[string]any{
+		"id":                 newID(),
+		"entityType":         "action",
+		"type":               "connection",
+		"connectionId":       connectionID,
+		"connectionModuleId": moduleID,
+		"actionId":           a.ActionID,
+		"values":             values,
+		"delay":              float64(a.DelayMS),
+		"enabled":            true,
+	}
+}
+
+// SetActions replaces the press ("down") and release ("up") actions of the
+// key's first step. A nil slice leaves that handler unchanged.
+func SetActions(b Doc, press, release []any) {
+	steps, _ := b["actionSteps"].([]any)
+	if len(steps) == 0 {
+		steps = NewButton(0, 0)["actionSteps"].([]any)
+		b["actionSteps"] = steps
+	}
+	step, _ := steps[0].(map[string]any)
+	set, _ := step["actionSet"].(map[string]any)
+	if set == nil {
+		set = map[string]any{}
+		step["actionSet"] = set
+	}
+	for key, acts := range map[string][]any{"down": press, "up": release} {
+		if acts == nil {
+			continue
+		}
+		h, _ := set[key].(map[string]any)
+		if h == nil {
+			h = map[string]any{"options": map[string]any{}}
+			set[key] = h
+		}
+		h["actions"] = acts
+	}
+}

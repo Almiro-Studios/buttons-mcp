@@ -165,12 +165,135 @@ func pickColors(n int) []layout.Color {
 }
 
 type callArgs struct {
-	Kind  string          `json:"kind" jsonschema:"query (read) or mutation (change)"`
-	Path  string          `json:"path" jsonschema:"tRPC procedure, e.g. connection.list, position.create, positionDocument.save"`
-	Input json.RawMessage `json:"input,omitempty" jsonschema:"procedure input as JSON (omit for none)"`
+	Kind  string `json:"kind" jsonschema:"query (read) or mutation (change)"`
+	Path  string `json:"path" jsonschema:"tRPC procedure, e.g. connection.list, position.create, positionDocument.save"`
+	Input any    `json:"input,omitempty" jsonschema:"procedure input: a JSON object, array or value (omit for none)"`
+}
+
+type listActionsArgs struct {
+	Connection string `json:"connection,omitempty" jsonschema:"only this connection (label, id or module, case-insensitive substring)"`
+}
+
+type setActionsArgs struct {
+	keyArgs
+	Press   []layout.Action `json:"press,omitempty" jsonschema:"actions run when the key goes down, in order; omit to leave unchanged, [] to clear"`
+	Release []layout.Action `json:"release,omitempty" jsonschema:"actions run when the key comes up; omit to leave unchanged, [] to clear"`
+}
+
+type connActions struct {
+	ID       string `json:"id"`
+	Label    string `json:"label"`
+	ModuleID string `json:"moduleId"`
+	Actions  []struct {
+		ID          string           `json:"id"`
+		Label       string           `json:"label"`
+		Description string           `json:"description"`
+		Options     []map[string]any `json:"options"`
+	} `json:"actions"`
+}
+
+func allActions(ctx context.Context, c *trpc.Client) ([]connActions, error) {
+	raw, err := c.Query(ctx, "connection.allActions", map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	var out []connActions
+	return out, json.Unmarshal(raw, &out)
+}
+
+// resolveActions turns tool input into stored actions, looking up each
+// action's connection and module.
+func resolveActions(conns []connActions, in []layout.Action) ([]any, error) {
+	if in == nil {
+		return nil, nil
+	}
+	out := []any{}
+	for _, a := range in {
+		connID, _, ok := strings.Cut(a.ActionID, ":")
+		if !ok {
+			return nil, fmt.Errorf("action_id %q should look like <connectionId>:<action>; see list_actions", a.ActionID)
+		}
+		var mod string
+		found := false
+		for _, cn := range conns {
+			if cn.ID != connID {
+				continue
+			}
+			mod = cn.ModuleID
+			for _, act := range cn.Actions {
+				if act.ID == a.ActionID {
+					found = true
+				}
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("unknown action %q; see list_actions", a.ActionID)
+		}
+		out = append(out, layout.ConnectionAction(a, connID, mod))
+	}
+	return out, nil
 }
 
 func register(s *mcp.Server, c *trpc.Client) {
+	mcp.AddTool(s, &mcp.Tool{Name: "list_actions", Description: "List the actions each connection offers (switch ATEM input, route Videohub, start stream, …) with their option ids, types, defaults and choices. Use the ids with set_button_actions."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, a listActionsArgs) (*mcp.CallToolResult, any, error) {
+			conns, err := allActions(ctx, c)
+			if err != nil {
+				return nil, nil, err
+			}
+			f := strings.ToLower(a.Connection)
+			var out []map[string]any
+			for _, cn := range conns {
+				if f != "" && !strings.Contains(strings.ToLower(cn.ID+" "+cn.Label+" "+cn.ModuleID), f) {
+					continue
+				}
+				var acts []map[string]any
+				for _, act := range cn.Actions {
+					var opts []map[string]any
+					for _, o := range act.Options {
+						opt := map[string]any{"id": o["id"], "label": o["label"], "type": o["type"], "default": o["default"]}
+						if ch, ok := o["choices"].([]any); ok {
+							var ids []any
+							for _, x := range ch {
+								if m, ok := x.(map[string]any); ok {
+									ids = append(ids, m["id"])
+								}
+							}
+							opt["choices"] = ids
+						}
+						opts = append(opts, opt)
+					}
+					acts = append(acts, map[string]any{"action_id": act.ID, "label": act.Label, "options": opts})
+				}
+				out = append(out, map[string]any{"connection": cn.Label, "connection_id": cn.ID, "module": cn.ModuleID, "actions": acts})
+			}
+			return jsonResult(out), nil, nil
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "set_button_actions", Description: "Set what the key at x,y does when pressed and released: a list of connection actions (from list_actions) with option values and optional delays. Creates the key if needed. Saves and applies the layout."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, a setActionsArgs) (*mcp.CallToolResult, any, error) {
+			conns, err := allActions(ctx, c)
+			if err != nil {
+				return nil, nil, err
+			}
+			press, err := resolveActions(conns, a.Press)
+			if err != nil {
+				return nil, nil, err
+			}
+			release, err := resolveActions(conns, a.Release)
+			if err != nil {
+				return nil, nil, err
+			}
+			err = edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
+				layout.SetActions(layout.Upsert(doc, a.X, a.Y), press, release)
+				return nil
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+			return text("key %d,%d: %d press and %d release actions", a.X, a.Y, len(press), len(release)), nil, nil
+		})
+
 	mcp.AddTool(s, &mcp.Tool{
 		Name: "call_api",
 		Description: "Call any Buttons API procedure directly (the internal tRPC API the web UI uses). " +
@@ -178,10 +301,7 @@ func register(s *mcp.Server, c *trpc.Client) {
 			"positions (position.all, position.get, position.create, position.update, position.delete), surfaces, presets and more. " +
 			"Mutations change the live system; read the current state with a query first.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, a callArgs) (*mcp.CallToolResult, any, error) {
-		var input any
-		if len(a.Input) > 0 && string(a.Input) != "null" {
-			input = a.Input
-		}
+		input := a.Input
 		var raw json.RawMessage
 		var err error
 		switch a.Kind {
