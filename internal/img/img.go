@@ -155,7 +155,9 @@ func PNG64(ctx context.Context, src string) (string, error) {
 	return Encode(data)
 }
 
-// Encode converts PNG, JPEG, GIF or SVG bytes to base64 PNG.
+// Encode converts PNG, JPEG, GIF or SVG bytes to base64 PNG. SVG support
+// covers paths, shapes and gradients; masks and filters are not rendered, so
+// use a PNG for logos that rely on them.
 func Encode(data []byte) (string, error) {
 	m, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
@@ -178,7 +180,14 @@ func renderSVG(data []byte) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	icon.SetTarget(0, 0, size, size)
+	// Fit inside a square while keeping the aspect ratio, centred.
+	w, h := icon.ViewBox.W, icon.ViewBox.H
+	if w <= 0 || h <= 0 {
+		w, h = 1, 1
+	}
+	scale := float64(size) / max(w, h)
+	tw, th := w*scale, h*scale
+	icon.SetTarget((float64(size)-tw)/2, (float64(size)-th)/2, tw, th)
 	rgba := image.NewRGBA(image.Rect(0, 0, size, size))
 	icon.Draw(rasterx.NewDasher(size, size, rasterx.NewScannerGV(size, size, rgba, rgba.Bounds())), 1)
 	return rgba, nil

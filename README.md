@@ -154,7 +154,7 @@ http.server.HTTPServer(("127.0.0.1", 8765), H).serve_forever()
 
 Then ask your assistant: *"Add a generic-http connection called opener, and make key 15,0 do GET http://127.0.0.1:8765/open/github with GitHub's icon."*
 
-`site_icon` reads the icon a site declares (apple-touch-icon, PNG or SVG `<link rel=icon>`) and falls back to Google's public favicon service, which receives the site's domain.
+SVG images are rendered to PNG; masks and filters are not supported, so use a PNG export for logos that rely on them. `site_icon` reads the icon a site declares (apple-touch-icon, PNG or SVG `<link rel=icon>`) and falls back to Google's public favicon service, which receives the site's domain.
 
 ## How it works
 
