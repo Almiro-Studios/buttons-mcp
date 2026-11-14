@@ -15,6 +15,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Fixed
 
+- `add_connection` config was overwritten by the module's defaults on first start; it now waits for the module to start, applies the config and verifies it.
+
 - `call_api` rejected JSON objects as input.
 - Cursor web install link now uses `cursor.com/install-mcp`.
 

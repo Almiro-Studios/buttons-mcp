@@ -357,8 +357,22 @@ func register(s *mcp.Server, c *trpc.Client) {
 				return nil, nil, fmt.Errorf("connection created but no id returned: %s", raw)
 			}
 			if len(a.Config) > 0 {
-				if err := updateConnection(ctx, c, id, "", a.Config); err != nil {
-					return nil, nil, fmt.Errorf("created %s but config failed: %w", id, err)
+				// A new module writes its default config when it first starts,
+				// which would overwrite settings applied before that. Wait for
+				// it to start, apply, and confirm the values stuck.
+				waitStarted(ctx, c, id)
+				var lastErr error
+				for attempt := 0; attempt < 3; attempt++ {
+					if lastErr = updateConnection(ctx, c, id, "", a.Config); lastErr == nil {
+						time.Sleep(time.Second)
+						if _, cfg, err := getConnection(ctx, c, id); err == nil && configMatches(cfg, a.Config) {
+							break
+						}
+						lastErr = fmt.Errorf("config did not stick")
+					}
+				}
+				if lastErr != nil {
+					return nil, nil, fmt.Errorf("created %s but config failed: %w", id, lastErr)
 				}
 			}
 			return jsonResult(map[string]any{"connection_id": id, "module": a.Module + ":" + version}), nil, nil
@@ -725,4 +739,34 @@ func firstID(raw json.RawMessage) string {
 		return ""
 	}
 	return find(v)
+}
+
+// waitStarted waits up to 15 s for a new connection's module process to
+// report started (and its first config write to land).
+func waitStarted(ctx context.Context, c *trpc.Client, id string) {
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		conn, _, err := getConnection(ctx, c, id)
+		if err == nil {
+			st, _ := conn["state"].(map[string]any)
+			ps, _ := st["processStatus"].(map[string]any)
+			if ps["status"] == "started" {
+				time.Sleep(time.Second)
+				return
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+// configMatches reports whether every key in want has the same JSON value in got.
+func configMatches(got, want map[string]any) bool {
+	for k, v := range want {
+		a, _ := json.Marshal(got[k])
+		b, _ := json.Marshal(v)
+		if string(a) != string(b) {
+			return false
+		}
+	}
+	return true
 }
