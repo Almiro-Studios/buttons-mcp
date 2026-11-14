@@ -9,6 +9,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - `list_actions` and `set_button_actions` tools: keys can now run connection actions (ATEM cuts, Videohub routes, stream start/stop, …) on press and release.
 - Setup pages per AI client (Cursor, Claude Code, Claude Desktop, Codex) on GitHub Pages, with a `cursor://` MCP install link.
 - Use cases section in the README.
+- Connection tools: `list_connections`, `get_connection`, `add_connection`, `configure_connection`, `delete_connection`.
+- Key images in `set_button`: `site_icon` (a website's own icon), `image_url` and `image_file`; PNG, JPEG, GIF and SVG are converted to the PNG Buttons stores.
 
 ### Fixed
 

@@ -42,12 +42,15 @@ Already have the binary and login? [Install straight into Cursor](https://cursor
 | `list_positions` | List positions (layouts mapped to surfaces). |
 | `list_buttons` | List keys on a position: grid location, text, background, number of colour rules. |
 | `get_layout` | Raw layout document and revision, for advanced edits. |
-| `set_button` | Create or update the key at `x`,`y`: text, icon, background colour. |
+| `set_button` | Create or update the key at `x`,`y`: text, icon ([Tabler](https://tabler.io/icons) name, e.g. `brand-github`), background colour, and an image: a website's own icon (`site_icon`), an `image_url`, or a local `image_file` (PNG, JPEG, GIF or SVG). |
 | `delete_button` | Remove the key at `x`,`y`. |
 | `set_color_rules` | Replace a key's colour rules: each rule sets the background when its expression is true. |
 | `set_load_gradient` | Colour a key from green to red by a numeric variable, in 2–8 steps. |
 | `list_actions` | List the actions each connection offers (switch an ATEM input, route a Videohub, start a stream, …) with option ids, types, defaults and choices. |
 | `set_button_actions` | Set what a key does on press and release: connection actions with option values and delays. |
+| `list_connections` / `get_connection` | List connections, or show one connection's settings and status. |
+| `add_connection` | Add a connection for any installed module (e.g. `bmd-atem`, `obs-studio`, `generic-http`) and set its config. |
+| `configure_connection` / `delete_connection` | Change a connection's settings (merged) or label, or remove it. |
 | `list_variables` | List connections, to find variables for `$(connection.variable)`. |
 | `call_api` | Call any Buttons API procedure (query or mutation). Covers everything the UI can do that the tools above don't: connections, positions, surfaces, presets, … |
 
@@ -129,9 +132,29 @@ Things you can ask your assistant once the server is connected. Each needs the m
 7. **Recording / playback status.** *"Show HyperDeck 1 and 2 transport state and remaining record time; turn the time key orange under 10 minutes and red under 2."* Uses `bmd-hyperdeck`.
 8. **Service and network monitoring.** *"Add keys for our production servers that go red when Generic Ping fails, and show the last speed test."* Uses `generic-ping` and `generic-speedtest`.
 9. **Show-calling with ProPresenter.** *"Show the current and next slide titles and the countdown timer, red under 30 seconds."* Uses `renewedvision-propresenter-api`.
-10. **Studio environment.** *"Show Key Light brightness, Hue scene and room temperature from Home Assistant, and colour the temperature key blue to red."* Uses `elgato-keylight`, `philips-hue` and `homeassistant-server`.
+10. **Website launcher.** *"Put Sketchpad, GitHub and Portainer on the right side using each site's icon, and open the site in Chrome when pressed."* Uses `site_icon` for the faces and a `generic-http` action calling a small local opener service (see [Opening websites from keys](#opening-websites-from-keys)).
+11. **Studio environment.** *"Show Key Light brightness, Hue scene and room temperature from Home Assistant, and colour the temperature key blue to red."* Uses `elgato-keylight`, `philips-hue` and `homeassistant-server`.
 
 Keys can both **show** and **do**: `set_button` and the colour tools handle the display, and `set_button_actions` makes a key cut to an ATEM input, route a Videohub output, start a stream or run any other connection action on press or release. The assistant finds the right action and its options with `list_actions`.
+
+## Opening websites from keys
+
+Buttons runs actions on the Buttons server and has no "open a URL in my browser" action. To make a key open a website on your computer, run a tiny local service that opens a fixed list of sites, and call it with a `generic-http` GET action. A minimal example (Python, localhost only, allowlisted names):
+
+```python
+import http.server, subprocess
+SITES = {"github": "https://github.com", "docs": "https://example.com/docs"}
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        url = SITES.get(self.path.removeprefix("/open/"))
+        if url: subprocess.Popen(["open", url])  # macOS; use xdg-open on Linux
+        self.send_response(204 if url else 404); self.end_headers()
+http.server.HTTPServer(("127.0.0.1", 8765), H).serve_forever()
+```
+
+Then ask your assistant: *"Add a generic-http connection called opener, and make key 15,0 do GET http://127.0.0.1:8765/open/github with GitHub's icon."*
+
+`site_icon` reads the icon a site declares (apple-touch-icon, PNG or SVG `<link rel=icon>`) and falls back to Google's public favicon service, which receives the site's domain.
 
 ## How it works
 

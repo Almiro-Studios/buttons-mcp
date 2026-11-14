@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Almiro-Studios/buttons-mcp/internal/creds"
+	"github.com/Almiro-Studios/buttons-mcp/internal/img"
 	"github.com/Almiro-Studios/buttons-mcp/internal/layout"
 	"github.com/Almiro-Studios/buttons-mcp/internal/trpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -133,9 +134,12 @@ type keyArgs struct {
 
 type setButtonArgs struct {
 	keyArgs
-	Text    *string       `json:"text,omitempty" jsonschema:"key text; variables as $(connectionKey.variable), e.g. CI $(FileReader.contents)"`
-	Icon    *string       `json:"icon,omitempty" jsonschema:"icon name, e.g. shield; empty string removes the icon"`
-	BgColor *layout.Color `json:"bg_color,omitempty" jsonschema:"base background as [name, shade], e.g. [\"green\",\"500\"]"`
+	Text      *string       `json:"text,omitempty" jsonschema:"key text; variables as $(connectionKey.variable), e.g. CI $(FileReader.contents)"`
+	Icon      *string       `json:"icon,omitempty" jsonschema:"icon name, e.g. shield; empty string removes the icon"`
+	BgColor   *layout.Color `json:"bg_color,omitempty" jsonschema:"base background as [name, shade], e.g. [\"green\",\"500\"]"`
+	SiteIcon  *string       `json:"site_icon,omitempty" jsonschema:"website whose favicon becomes the key image, e.g. github.com; empty string removes the image"`
+	ImageURL  *string       `json:"image_url,omitempty" jsonschema:"http(s) URL of a PNG, JPEG, GIF or SVG to use as the key image; empty string removes the image"`
+	ImageFile *string       `json:"image_file,omitempty" jsonschema:"local path to a PNG, JPEG, GIF or SVG on the machine running buttons-mcp; empty string removes the image"`
 }
 
 type colorRulesArgs struct {
@@ -234,7 +238,146 @@ func resolveActions(conns []connActions, in []layout.Action) ([]any, error) {
 	return out, nil
 }
 
+type addConnArgs struct {
+	Module  string         `json:"module" jsonschema:"module id without version, e.g. bmd-atem, obs-studio, generic-http"`
+	Label   string         `json:"label" jsonschema:"connection name; also its variable key prefix"`
+	Version string         `json:"version,omitempty" jsonschema:"module version; default: newest installed"`
+	Config  map[string]any `json:"config,omitempty" jsonschema:"module settings to apply after creating, e.g. {\"host\":\"10.0.0.5\"}"`
+}
+
+type connConfigArgs struct {
+	ID     string         `json:"connection_id" jsonschema:"connection id from list_connections"`
+	Config map[string]any `json:"config,omitempty" jsonschema:"settings to change; merged into the current config"`
+	Label  string         `json:"label,omitempty" jsonschema:"new label (optional)"`
+}
+
+type connIDArgs struct {
+	ID string `json:"connection_id" jsonschema:"connection id from list_connections"`
+}
+
+// getConnection returns a connection with its config decoded (Buttons
+// returns config either as an object or as a JSON string).
+func getConnection(ctx context.Context, c *trpc.Client, id string) (map[string]any, map[string]any, error) {
+	raw, err := c.Query(ctx, "connection.get", id)
+	if err != nil {
+		return nil, nil, err
+	}
+	var conn map[string]any
+	if err := json.Unmarshal(raw, &conn); err != nil {
+		return nil, nil, err
+	}
+	cfg := map[string]any{}
+	switch v := conn["config"].(type) {
+	case map[string]any:
+		cfg = v
+	case string:
+		var wrap struct {
+			Config map[string]any `json:"config"`
+		}
+		if json.Unmarshal([]byte(v), &wrap) == nil && wrap.Config != nil {
+			cfg = wrap.Config
+		}
+	}
+	return conn, cfg, nil
+}
+
+func updateConnection(ctx context.Context, c *trpc.Client, id, label string, changes map[string]any) error {
+	conn, cfg, err := getConnection(ctx, c, id)
+	if err != nil {
+		return err
+	}
+	for k, v := range changes {
+		cfg[k] = v
+	}
+	if label == "" {
+		label, _ = conn["label"].(string)
+	}
+	key, _ := conn["variableKey"].(string)
+	_, err = c.Mutate(ctx, "connection.update", map[string]any{"id": id, "label": label, "variableKey": key, "config": cfg, "xyConfig": map[string]any{}})
+	return err
+}
+
 func register(s *mcp.Server, c *trpc.Client) {
+	mcp.AddTool(s, &mcp.Tool{Name: "list_connections", Description: "List connections (devices and services Buttons talks to) with id, label, module, variable key and status."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, _ empty) (*mcp.CallToolResult, any, error) {
+			raw, err := c.Query(ctx, "connection.list", map[string]any{})
+			if err != nil {
+				return nil, nil, err
+			}
+			var all []map[string]any
+			_ = json.Unmarshal(raw, &all)
+			var out []map[string]any
+			for _, cn := range all {
+				out = append(out, map[string]any{"id": cn["id"], "label": cn["label"], "module": cn["moduleId"], "variable_key": cn["variableKey"], "enabled": cn["enabled"]})
+			}
+			return jsonResult(out), nil, nil
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "get_connection", Description: "Show one connection's settings (config) and status."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, a connIDArgs) (*mcp.CallToolResult, any, error) {
+			conn, cfg, err := getConnection(ctx, c, a.ID)
+			if err != nil {
+				return nil, nil, err
+			}
+			return jsonResult(map[string]any{"id": conn["id"], "label": conn["label"], "module": conn["moduleId"], "variable_key": conn["variableKey"], "enabled": conn["enabled"], "config": cfg, "state": conn["state"]}), nil, nil
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "add_connection", Description: "Add a connection (module instance), e.g. bmd-atem for an ATEM switcher or generic-http, and optionally set its config. Returns the new connection id."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, a addConnArgs) (*mcp.CallToolResult, any, error) {
+			version := a.Version
+			if version == "" {
+				raw, err := c.Query(ctx, "connection.getInstalledModuleVersions", a.Module)
+				if err != nil {
+					return nil, nil, err
+				}
+				var vs []struct {
+					Version      string `json:"version"`
+					IsCompatible bool   `json:"isCompatible"`
+					IsPrerelease bool   `json:"isPrerelease"`
+				}
+				_ = json.Unmarshal(raw, &vs)
+				for _, v := range vs {
+					if v.IsCompatible && !v.IsPrerelease {
+						version = v.Version
+						break
+					}
+				}
+				if version == "" {
+					return nil, nil, fmt.Errorf("module %q is not installed; check the id or install it in Buttons", a.Module)
+				}
+			}
+			raw, err := c.Mutate(ctx, "connection.addMany", map[string]any{"module": a.Module, "version": version, "label": a.Label, "type": "companion", "count": 1, "firstNumber": 1})
+			if err != nil {
+				return nil, nil, err
+			}
+			id := firstID(raw)
+			if id == "" {
+				return nil, nil, fmt.Errorf("connection created but no id returned: %s", raw)
+			}
+			if len(a.Config) > 0 {
+				if err := updateConnection(ctx, c, id, "", a.Config); err != nil {
+					return nil, nil, fmt.Errorf("created %s but config failed: %w", id, err)
+				}
+			}
+			return jsonResult(map[string]any{"connection_id": id, "module": a.Module + ":" + version}), nil, nil
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "configure_connection", Description: "Change a connection's settings (merged into the current config) and/or label. See get_connection for current values."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, a connConfigArgs) (*mcp.CallToolResult, any, error) {
+			if err := updateConnection(ctx, c, a.ID, a.Label, a.Config); err != nil {
+				return nil, nil, err
+			}
+			return text("updated connection %s", a.ID), nil, nil
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "delete_connection", Description: "Delete a connection. Keys that use its actions or variables stop working."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, a connIDArgs) (*mcp.CallToolResult, any, error) {
+			if _, err := c.Mutate(ctx, "connection.delete", a.ID); err != nil {
+				return nil, nil, err
+			}
+			return text("deleted connection %s", a.ID), nil, nil
+		})
+
 	mcp.AddTool(s, &mcp.Tool{Name: "list_actions", Description: "List the actions each connection offers (switch ATEM input, route Videohub, start stream, …) with their option ids, types, defaults and choices. Use the ids with set_button_actions."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a listActionsArgs) (*mcp.CallToolResult, any, error) {
 			conns, err := allActions(ctx, c)
@@ -361,11 +504,42 @@ func register(s *mcp.Server, c *trpc.Client) {
 			return jsonResult(sv), nil, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "set_button", Description: "Create or update the key at x,y: text (with $(...) variables), icon and base background colour. Saves and applies the layout."},
+	mcp.AddTool(s, &mcp.Tool{Name: "set_button", Description: "Create or update the key at x,y: text (with $(...) variables), icon (Tabler icon name, e.g. brand-github), base background colour, and an image (a site's icon via site_icon, an image_url, or a local image_file; PNG, JPEG, GIF or SVG). Use text \"\" and icon \"\" for an image-only key. Saves and applies the layout."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a setButtonArgs) (*mcp.CallToolResult, any, error) {
-			err := edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
+			var png64 *string
+			setImage := func(f func() (string, error), clear bool) error {
+				v := ""
+				if !clear {
+					var err error
+					if v, err = f(); err != nil {
+						return err
+					}
+				}
+				png64 = &v
+				return nil
+			}
+			var err error
+			switch {
+			case a.SiteIcon != nil:
+				err = setImage(func() (string, error) { return img.SiteIcon(ctx, *a.SiteIcon) }, *a.SiteIcon == "")
+			case a.ImageURL != nil:
+				err = setImage(func() (string, error) { return img.PNG64(ctx, *a.ImageURL) }, *a.ImageURL == "")
+			case a.ImageFile != nil:
+				err = setImage(func() (string, error) { return img.File(*a.ImageFile) }, *a.ImageFile == "")
+			}
+			if err != nil {
+				return nil, nil, err
+			}
+			err = edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
 				b := layout.Upsert(doc, a.X, a.Y)
 				ct := layout.Content(b)
+				if png64 != nil {
+					if *png64 == "" {
+						delete(ct, "png64")
+					} else {
+						ct["png64"] = *png64
+					}
+				}
 				if a.Text != nil {
 					ct["text"] = *a.Text
 				}
@@ -509,4 +683,35 @@ func main() {
 	if err := s.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// firstID finds the first "id" in a connection.addMany response, which may
+// be an object, an array of objects, or an array of ids.
+func firstID(raw json.RawMessage) string {
+	var v any
+	_ = json.Unmarshal(raw, &v)
+	var find func(any) string
+	find = func(x any) string {
+		switch t := x.(type) {
+		case string:
+			return t
+		case map[string]any:
+			if id, ok := t["id"].(string); ok {
+				return id
+			}
+			for _, y := range t {
+				if id := find(y); id != "" {
+					return id
+				}
+			}
+		case []any:
+			for _, y := range t {
+				if id := find(y); id != "" {
+					return id
+				}
+			}
+		}
+		return ""
+	}
+	return find(v)
 }

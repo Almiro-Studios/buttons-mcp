@@ -5,6 +5,8 @@ go 1.26.0
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/modelcontextprotocol/go-sdk v1.8.0
+	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c
+	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/term v0.48.0
 )
@@ -16,8 +18,11 @@ require (
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
+	golang.org/x/image v0.0.0-20211028202545-6944b10bf410 // indirect
+	golang.org/x/net v0.0.0-20211118161319-6a13c67c3ce4 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
+	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/time v0.15.0 // indirect
 )
