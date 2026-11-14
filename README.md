@@ -42,7 +42,7 @@ Already have the binary and login? [Install straight into Cursor](https://cursor
 | `list_positions` | List positions (layouts mapped to surfaces). |
 | `list_buttons` | List keys on a position: grid location, text, background, number of colour rules. |
 | `get_layout` | Raw layout document and revision, for advanced edits. |
-| `set_button` | Create or update the key at `x`,`y`: text, icon ([Tabler](https://tabler.io/icons) name, e.g. `brand-github`), background colour, and an image: a website's own icon (`site_icon`), an `image_url`, or a local `image_file` (PNG, JPEG, GIF or SVG). |
+| `set_button` | Create or update the key at `x`,`y`: text, icon ([Tabler](https://tabler.io/icons) name, e.g. `brand-github`), background colour, and an image: a website's own icon (`site_icon`), an `image_url`, or a local `image_file` (PNG, JPEG, GIF or SVG). `style` sets the layout (`bigIcon` fills the key; image-only keys use it by default); `text_color` sets the text colour. |
 | `delete_button` | Remove the key at `x`,`y`. |
 | `set_color_rules` | Replace a key's colour rules: each rule sets the background when its expression is true. |
 | `set_load_gradient` | Colour a key from green to red by a numeric variable, in 2–8 steps. |

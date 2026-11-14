@@ -140,6 +140,8 @@ type setButtonArgs struct {
 	SiteIcon  *string       `json:"site_icon,omitempty" jsonschema:"website whose favicon becomes the key image, e.g. github.com; empty string removes the image"`
 	ImageURL  *string       `json:"image_url,omitempty" jsonschema:"http(s) URL of a PNG, JPEG, GIF or SVG to use as the key image; empty string removes the image"`
 	ImageFile *string       `json:"image_file,omitempty" jsonschema:"local path to a PNG, JPEG, GIF or SVG on the machine running buttons-mcp; empty string removes the image"`
+	Style     *string       `json:"style,omitempty" jsonschema:"key layout: bigIcon (icon/image fills the key), iconAndText (default), contextAndText, bigText, strip or twoLines. Image-only keys default to bigIcon."`
+	TextColor *layout.Color `json:"text_color,omitempty" jsonschema:"text colour as [name, shade], e.g. [\"gray\",\"900\"] on light backgrounds"`
 }
 
 type colorRulesArgs struct {
@@ -504,7 +506,7 @@ func register(s *mcp.Server, c *trpc.Client) {
 			return jsonResult(sv), nil, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "set_button", Description: "Create or update the key at x,y: text (with $(...) variables), icon (Tabler icon name, e.g. brand-github), base background colour, and an image (a site's icon via site_icon, an image_url, or a local image_file; PNG, JPEG, GIF or SVG). Use text \"\" and icon \"\" for an image-only key. Saves and applies the layout."},
+	mcp.AddTool(s, &mcp.Tool{Name: "set_button", Description: "Create or update the key at x,y: text (with $(...) variables), icon (Tabler icon name, e.g. brand-github), base background colour, and an image (a site's icon via site_icon, an image_url, or a local image_file; PNG, JPEG, GIF or SVG). Use text \"\" and icon \"\" for an image-only key (shown full size with style bigIcon). Saves and applies the layout."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a setButtonArgs) (*mcp.CallToolResult, any, error) {
 			var png64 *string
 			setImage := func(f func() (string, error), clear bool) error {
@@ -552,6 +554,15 @@ func register(s *mcp.Server, c *trpc.Client) {
 				}
 				if a.BgColor != nil {
 					ct["bgColor"] = []any{a.BgColor[0], a.BgColor[1]}
+				}
+				if a.TextColor != nil {
+					ct["textColor"] = []any{a.TextColor[0], a.TextColor[1]}
+				}
+				switch {
+				case a.Style != nil:
+					b["buttonStyle"] = *a.Style
+				case png64 != nil && *png64 != "" && ct["text"] == "":
+					b["buttonStyle"] = "bigIcon" // image-only key: let the image fill it
 				}
 				return nil
 			})

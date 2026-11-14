@@ -11,6 +11,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Use cases section in the README.
 - Connection tools: `list_connections`, `get_connection`, `add_connection`, `configure_connection`, `delete_connection`.
 - Key images in `set_button`: `site_icon` (a website's own icon), `image_url` and `image_file`; PNG, JPEG, GIF and SVG are converted to the PNG Buttons stores.
+- `set_button` options `style` (e.g. `bigIcon` for a full-size icon or image) and `text_color`; image-only keys default to `bigIcon`.
 
 ### Fixed
 
