@@ -17,6 +17,7 @@ import (
 	"github.com/Almiro-Studios/buttons-mcp/internal/creds"
 	"github.com/Almiro-Studios/buttons-mcp/internal/img"
 	"github.com/Almiro-Studios/buttons-mcp/internal/layout"
+	"github.com/Almiro-Studios/buttons-mcp/internal/surface"
 	"github.com/Almiro-Studios/buttons-mcp/internal/trpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -123,13 +124,100 @@ func jsonResult(v any) *mcp.CallToolResult {
 type empty struct{}
 
 type posArgs struct {
-	PositionID string `json:"position_id" jsonschema:"position id from list_positions"`
+	PositionID string `json:"position_id" jsonschema:"layout id from list_positions. This is not a key number."`
+}
+
+type describeArgs struct {
+	PositionID string `json:"position_id,omitempty" jsonschema:"layout id from list_positions. Not a key number. Omit for the numbering cheat sheet only."`
 }
 
 type keyArgs struct {
-	PositionID string `json:"position_id" jsonschema:"position id from list_positions"`
-	X          int    `json:"x" jsonschema:"column, 0-based from the left"`
-	Y          int    `json:"y" jsonschema:"row, 0-based from the top"`
+	PositionID string `json:"position_id" jsonschema:"layout id from list_positions. This is not a key number."`
+	Key        *int   `json:"key,omitempty" jsonschema:"1-based Stream Deck Studio key (1-32). Two side-by-side groups of 16, each 8 wide and 2 tall. Keys 1-16 are the left group: key 9 is x=0,y=1, directly under key 1. Keys 17-32 are the right group: key 17 is x=8,y=0."`
+	X          *int   `json:"x,omitempty" jsonschema:"column, 0-based from the left. Omit when passing key."`
+	Y          *int   `json:"y,omitempty" jsonschema:"row, 0-based from the top. Omit when passing key."`
+}
+
+// cell resolves a key number or x,y into layout coordinates. A key number
+// is shifted by the surface origin, which is 0,0 when the Studio sits at
+// the corner of the layout.
+func (k keyArgs) cell(ctx context.Context, c *trpc.Client) (x, y int, err error) {
+	if k.Key != nil {
+		x, y, ok := surface.XY(*k.Key)
+		if !ok {
+			return 0, 0, fmt.Errorf("key %d is outside 1-%d", *k.Key, surface.Keys)
+		}
+		ox, oy, _, _ := surfaceOrigin(ctx, c, k.PositionID)
+		return ox + x, oy + y, nil
+	}
+	if k.X == nil || k.Y == nil {
+		return 0, 0, fmt.Errorf("pass key (1-%d) or both x and y", surface.Keys)
+	}
+	return *k.X, *k.Y, nil
+}
+
+func located(x, y int) string {
+	if key, ok := surface.Key(x, y); ok {
+		return fmt.Sprintf("key %d (%d,%d)", key, x, y)
+	}
+	return fmt.Sprintf("%d,%d", x, y)
+}
+
+func asInt(v any) int {
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	case json.Number:
+		i, _ := n.Int64()
+		return int(i)
+	default:
+		return 0
+	}
+}
+
+func asString(v any) string {
+	s, _ := v.(string)
+	return s
+}
+
+// surfaceOrigin returns where the surface for a layout sits on the canvas.
+// Key 1 is at that origin. Missing data means origin 0,0.
+func surfaceOrigin(ctx context.Context, c *trpc.Client, positionID string) (ox, oy int, model string, ok bool) {
+	raw, err := c.Query(ctx, "surface.all", map[string]any{})
+	if err != nil {
+		return 0, 0, "", false
+	}
+	var all []map[string]any
+	if json.Unmarshal(raw, &all) != nil {
+		return 0, 0, "", false
+	}
+	for _, s := range all {
+		if positionID != "" && asString(s["positionId"]) != positionID {
+			continue
+		}
+		return asInt(s["positionX"]), asInt(s["positionY"]), asString(s["modelId"]), true
+	}
+	return 0, 0, "", false
+}
+
+func buttonView(b layout.Doc, ox, oy int) map[string]any {
+	x, y, _ := layout.Pos(b)
+	ct := layout.Content(b)
+	fbs, _ := b["feedbacks"].([]any)
+	row := map[string]any{"x": x, "y": y, "text": ct["text"], "icon": ct["icon"], "bg_color": ct["bgColor"], "color_rules": len(fbs)}
+	if key, ok := surface.Key(x-ox, y-oy); ok {
+		row["key"] = key
+		if group, index, ok := surface.Group(key); ok {
+			row["group"] = group
+			row["position_in_group"] = index
+		}
+		if where, ok := surface.Where(x-ox, y-oy); ok {
+			row["where"] = where
+		}
+	}
+	return row
 }
 
 type setButtonArgs struct {
@@ -429,8 +517,12 @@ func register(s *mcp.Server, c *trpc.Client) {
 			return jsonResult(out), nil, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "set_button_actions", Description: "Set what the key at x,y does when pressed and released: a list of connection actions (from list_actions) with option values and optional delays. Creates the key if needed. Saves and applies the layout."},
+	mcp.AddTool(s, &mcp.Tool{Name: "set_button_actions", Description: "Set what a key does when pressed and released: a list of connection actions (from list_actions) with option values and optional delays. Pass key (1-32) or x,y. Keys 1-16 are the left group of 16 (8 wide, 2 tall); key 9 is x=0,y=1, under key 1. Keys 17-32 are the right group; key 17 is x=8,y=0. Creates the key if needed. Saves and applies the layout."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a setActionsArgs) (*mcp.CallToolResult, any, error) {
+			x, y, err := a.cell(ctx, c)
+			if err != nil {
+				return nil, nil, err
+			}
 			conns, err := allActions(ctx, c)
 			if err != nil {
 				return nil, nil, err
@@ -444,13 +536,13 @@ func register(s *mcp.Server, c *trpc.Client) {
 				return nil, nil, err
 			}
 			err = edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
-				layout.SetActions(layout.Upsert(doc, a.X, a.Y), press, release)
+				layout.SetActions(layout.Upsert(doc, x, y), press, release)
 				return nil
 			})
 			if err != nil {
 				return nil, nil, err
 			}
-			return text("key %d,%d: %d press and %d release actions", a.X, a.Y, len(press), len(release)), nil, nil
+			return text("%s: %d press and %d release actions", located(x, y), len(press), len(release)), nil, nil
 		})
 
 	mcp.AddTool(s, &mcp.Tool{
@@ -480,7 +572,7 @@ func register(s *mcp.Server, c *trpc.Client) {
 		return text("%s", raw), nil, nil
 	})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "list_positions", Description: "List Buttons positions (layouts mapped to surfaces such as a Stream Deck)."},
+	mcp.AddTool(s, &mcp.Tool{Name: "list_positions", Description: "List layouts and the surface on each. A Stream Deck Studio is two side-by-side groups of 16, each 8 wide and 2 tall. Left group keys 1-16: position 9 is x=0,y=1. Right group keys 17-32: its top position 1 is x=8,y=0. Call describe_surface before placing keys."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, _ empty) (*mcp.CallToolResult, any, error) {
 			raw, err := c.Query(ctx, "position.all", nil)
 			if err != nil {
@@ -488,25 +580,65 @@ func register(s *mcp.Server, c *trpc.Client) {
 			}
 			var all []map[string]any
 			_ = json.Unmarshal(raw, &all)
+			var surfaces []map[string]any
+			if sraw, err := c.Query(ctx, "surface.all", map[string]any{}); err == nil {
+				_ = json.Unmarshal(sraw, &surfaces)
+			}
 			var out []map[string]any
 			for _, p := range all {
-				out = append(out, map[string]any{"id": p["id"], "label": p["label"], "description": p["description"]})
+				id := asString(p["id"])
+				row := map[string]any{"id": id, "label": p["label"], "description": p["description"]}
+				var on []map[string]any
+				for _, s := range surfaces {
+					if asString(s["positionId"]) != id {
+						continue
+					}
+					entry := map[string]any{"model": s["modelId"], "origin_x": asInt(s["positionX"]), "origin_y": asInt(s["positionY"])}
+					if asString(s["modelId"]) == "StreamDeckStudio" {
+						entry["keys"] = "Two side-by-side groups of 16, each 8 wide and 2 tall. Left group keys 1-16: positions 9-11 are x=0,1,2 y=1. Right group keys 17-32: top positions 1-3 are x=8,9,10 y=0."
+					}
+					on = append(on, entry)
+				}
+				if len(on) > 0 {
+					row["surfaces"] = on
+				}
+				out = append(out, row)
 			}
 			return jsonResult(out), nil, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "list_buttons", Description: "List the keys on a position with their grid location, text, background and colour-rule count."},
+	mcp.AddTool(s, &mcp.Tool{Name: "describe_surface", Description: "How the Stream Deck is numbered. Two side-by-side groups of 16, each 8 wide and 2 tall. Left group positions 9-11 are x=0,1,2 y=1, directly under positions 1-3. Right group top positions 1-3 are x=8,9,10 y=0. Call this before placing keys. position_id is the layout, not a key number."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, a describeArgs) (*mcp.CallToolResult, any, error) {
+			out := surface.Summary()
+			ox, oy, model, ok := surfaceOrigin(ctx, c, a.PositionID)
+			if ok {
+				out["origin_x"], out["origin_y"], out["attached_model"] = ox, oy, model
+			}
+			if a.PositionID == "" {
+				return jsonResult(out), nil, nil
+			}
+			sv, err := load(ctx, c, a.PositionID)
+			if err != nil {
+				return nil, nil, err
+			}
+			var buttons []map[string]any
+			for _, b := range layout.Buttons(sv.Document) {
+				buttons = append(buttons, buttonView(b, ox, oy))
+			}
+			out["buttons"] = buttons
+			return jsonResult(out), nil, nil
+		})
+
+	mcp.AddTool(s, &mcp.Tool{Name: "list_buttons", Description: "List keys with key number, group (1 = left 16, 2 = right 16), position_in_group, where, x,y, text, background and colour-rule count. Left position 9 is directly under left position 1."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a posArgs) (*mcp.CallToolResult, any, error) {
 			sv, err := load(ctx, c, a.PositionID)
 			if err != nil {
 				return nil, nil, err
 			}
+			ox, oy, _, _ := surfaceOrigin(ctx, c, a.PositionID)
 			var out []map[string]any
 			for _, b := range layout.Buttons(sv.Document) {
-				x, y, _ := layout.Pos(b)
-				ct := layout.Content(b)
-				fbs, _ := b["feedbacks"].([]any)
-				out = append(out, map[string]any{"x": x, "y": y, "text": ct["text"], "icon": ct["icon"], "bg_color": ct["bgColor"], "color_rules": len(fbs)})
+				out = append(out, buttonView(b, ox, oy))
 			}
 			return jsonResult(out), nil, nil
 		})
@@ -520,8 +652,12 @@ func register(s *mcp.Server, c *trpc.Client) {
 			return jsonResult(sv), nil, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "set_button", Description: "Create or update the key at x,y: text (with $(...) variables), icon (Tabler icon name, e.g. brand-github), base background colour, and an image (a site's icon via site_icon, an image_url, or a local image_file; PNG, JPEG, GIF or SVG). Use text \"\" and icon \"\" for an image-only key (shown full size with style bigIcon). Saves and applies the layout."},
+	mcp.AddTool(s, &mcp.Tool{Name: "set_button", Description: "Create or update a key. Pass key (1-32) or x,y. The Studio is two side-by-side groups of 16, each 8 wide and 2 tall. Keys 9, 10, 11 are the left group's second row (x=0,1,2 y=1), directly under keys 1, 2, 3. Keys 17, 18, 19 are the right group's top row (x=8,9,10 y=0). Sets text (with $(...) variables), icon (Tabler icon name, e.g. brand-github), base background colour, and an image (a site's icon via site_icon, an image_url, or a local image_file; PNG, JPEG, GIF or SVG). Use text \"\" and icon \"\" for an image-only key (shown full size with style bigIcon). Saves and applies the layout."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a setButtonArgs) (*mcp.CallToolResult, any, error) {
+			x, y, err := a.cell(ctx, c)
+			if err != nil {
+				return nil, nil, err
+			}
 			var png64 *string
 			setImage := func(f func() (string, error), clear bool) error {
 				v := ""
@@ -534,7 +670,6 @@ func register(s *mcp.Server, c *trpc.Client) {
 				png64 = &v
 				return nil
 			}
-			var err error
 			switch {
 			case a.SiteIcon != nil:
 				err = setImage(func() (string, error) { return img.SiteIcon(ctx, *a.SiteIcon) }, *a.SiteIcon == "")
@@ -547,7 +682,7 @@ func register(s *mcp.Server, c *trpc.Client) {
 				return nil, nil, err
 			}
 			err = edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
-				b := layout.Upsert(doc, a.X, a.Y)
+				b := layout.Upsert(doc, x, y)
 				ct := layout.Content(b)
 				if png64 != nil {
 					if *png64 == "" {
@@ -583,31 +718,39 @@ func register(s *mcp.Server, c *trpc.Client) {
 			if err != nil {
 				return nil, nil, err
 			}
-			return text("saved key %d,%d", a.X, a.Y), nil, nil
+			return text("saved %s", located(x, y)), nil, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "delete_button", Description: "Remove the key at x,y and save the layout."},
+	mcp.AddTool(s, &mcp.Tool{Name: "delete_button", Description: "Remove a key and save the layout. Pass key (1-32) or x,y."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a keyArgs) (*mcp.CallToolResult, any, error) {
+			x, y, err := a.cell(ctx, c)
+			if err != nil {
+				return nil, nil, err
+			}
 			found := false
-			err := edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
-				found = layout.Delete(doc, a.X, a.Y)
+			err = edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
+				found = layout.Delete(doc, x, y)
 				if !found {
-					return fmt.Errorf("no key at %d,%d", a.X, a.Y)
+					return fmt.Errorf("no %s", located(x, y))
 				}
 				return nil
 			})
 			if err != nil {
 				return nil, nil, err
 			}
-			return text("deleted key %d,%d", a.X, a.Y), nil, nil
+			return text("deleted %s", located(x, y)), nil, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "set_color_rules", Description: "Replace a key's colour rules: each rule sets the background when its Buttons expression is true (e.g. $(FileReader.contents) >= 15). Empty list removes all rules."},
+	mcp.AddTool(s, &mcp.Tool{Name: "set_color_rules", Description: "Replace a key's colour rules: each rule sets the background when its Buttons expression is true (e.g. $(FileReader.contents) >= 15). Pass key (1-32) or x,y. Empty list removes all rules."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a colorRulesArgs) (*mcp.CallToolResult, any, error) {
-			err := edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
-				b := layout.Find(doc, a.X, a.Y)
+			x, y, err := a.cell(ctx, c)
+			if err != nil {
+				return nil, nil, err
+			}
+			err = edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
+				b := layout.Find(doc, x, y)
 				if b == nil {
-					return fmt.Errorf("no key at %d,%d", a.X, a.Y)
+					return fmt.Errorf("no %s", located(x, y))
 				}
 				if len(a.Rules) == 0 {
 					b["feedbacks"] = []any{}
@@ -619,11 +762,15 @@ func register(s *mcp.Server, c *trpc.Client) {
 			if err != nil {
 				return nil, nil, err
 			}
-			return text("set %d colour rules on key %d,%d", len(a.Rules), a.X, a.Y), nil, nil
+			return text("set %d colour rules on %s", len(a.Rules), located(x, y)), nil, nil
 		})
 
-	mcp.AddTool(s, &mcp.Tool{Name: "set_load_gradient", Description: "Colour a key green→red by a numeric variable: splits low..high into bands (Buttons has a fixed palette, so this is a stepped gradient)."},
+	mcp.AddTool(s, &mcp.Tool{Name: "set_load_gradient", Description: "Colour a key green→red by a numeric variable: splits low..high into bands (Buttons has a fixed palette, so this is a stepped gradient). Pass key (1-32) or x,y."},
 		func(ctx context.Context, _ *mcp.CallToolRequest, a gradientArgs) (*mcp.CallToolResult, any, error) {
+			x, y, err := a.cell(ctx, c)
+			if err != nil {
+				return nil, nil, err
+			}
 			n := a.Steps
 			if n == 0 {
 				n = 5
@@ -643,10 +790,10 @@ func register(s *mcp.Server, c *trpc.Client) {
 				}
 				rules = append(rules, layout.ColorRule{Expression: expr, Color: colors[i]})
 			}
-			err := edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
-				b := layout.Find(doc, a.X, a.Y)
+			err = edit(ctx, c, a.PositionID, func(doc layout.Doc) error {
+				b := layout.Find(doc, x, y)
 				if b == nil {
-					return fmt.Errorf("no key at %d,%d", a.X, a.Y)
+					return fmt.Errorf("no %s", located(x, y))
 				}
 				layout.Content(b)["bgColor"] = []any{colors[0][0], colors[0][1]}
 				layout.SetColorRules(b, rules)
@@ -703,7 +850,7 @@ func main() {
 		os.Stdout.Write(raw)
 		return
 	}
-	s := mcp.NewServer(&mcp.Implementation{Name: "buttons-mcp", Version: version}, nil)
+	s := mcp.NewServer(&mcp.Implementation{Name: "buttons-mcp", Version: version}, &mcp.ServerOptions{Instructions: surface.Instructions})
 	register(s, c)
 	if err := s.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		log.Fatal(err)

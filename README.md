@@ -39,8 +39,9 @@ Already have the binary and login? [Install straight into Cursor](https://cursor
 
 | Tool | What it does |
 |---|---|
-| `list_positions` | List positions (layouts mapped to surfaces). |
-| `list_buttons` | List keys on a position: grid location, text, background, number of colour rules. |
+| `list_positions` | List positions (layouts mapped to surfaces). A Studio is two side-by-side groups of 16, each 8 wide and 2 tall. |
+| `describe_surface` | How the surface is numbered, and which key sits under which. Call this before placing keys. |
+| `list_buttons` | List keys with their 1-based key number, grid location, text, background and colour-rule count. |
 | `get_layout` | Raw layout document and revision, for advanced edits. |
 | `set_button` | Create or update the key at `x`,`y`: text, icon ([Tabler](https://tabler.io/icons) name, e.g. `brand-github`), background colour, and an image: a website's own icon (`site_icon`), an `image_url`, or a local `image_file` (PNG, JPEG, GIF or SVG). `style` sets the layout (`bigIcon` fills the key; image-only keys use it by default); `text_color` sets the text colour. |
 | `delete_button` | Remove the key at `x`,`y`. |
