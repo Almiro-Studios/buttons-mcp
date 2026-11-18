@@ -92,6 +92,7 @@ func load(ctx context.Context, c *trpc.Client, positionID string) (*saved, error
 }
 
 func save(ctx context.Context, c *trpc.Client, positionID string, s *saved) error {
+	layout.SortReadingOrder(s.Document)
 	_, err := c.Mutate(ctx, "positionDocument.save", map[string]any{
 		"resourceId":       positionID,
 		"expectedRevision": s.Revision,
@@ -687,6 +688,7 @@ func register(s *mcp.Server, c *trpc.Client) {
 				if png64 != nil {
 					if *png64 == "" {
 						delete(ct, "png64")
+						delete(ct, "imageUuid") // images uploaded in the editor
 					} else {
 						ct["png64"] = *png64
 					}

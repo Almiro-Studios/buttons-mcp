@@ -30,3 +30,34 @@ func TestSetColorRules(t *testing.T) {
 		t.Fatalf("expression = %v", val)
 	}
 }
+
+func TestSortReadingOrder(t *testing.T) {
+	doc := Doc{"type": "section", "items": []any{}}
+	for _, p := range [][2]int{{0, 0}, {12, 0}, {0, 1}, {15, 1}, {3, 1}, {11, 0}} {
+		Upsert(doc, p[0], p[1])
+	}
+	floating := Doc{"type": "button", "location": map[string]any{"size": map[string]any{"w": float64(1), "h": float64(1)}}}
+	items := doc["items"].([]any)
+	doc["items"] = append(items[:2:2], append([]any{floating}, items[2:]...)...)
+
+	SortReadingOrder(doc)
+
+	var got [][2]int
+	for i, it := range doc["items"].([]any) {
+		m := it.(map[string]any)
+		if i == 2 {
+			if m["location"].(map[string]any)["staticPosition"] != nil {
+				t.Fatalf("floating item moved: slot 2 = %v", m)
+			}
+			continue
+		}
+		x, y, _ := Pos(m)
+		got = append(got, [2]int{x, y})
+	}
+	want := [][2]int{{0, 0}, {11, 0}, {12, 0}, {0, 1}, {3, 1}, {15, 1}}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("order = %v, want %v", got, want)
+		}
+	}
+}
