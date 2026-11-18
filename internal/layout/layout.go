@@ -8,6 +8,7 @@ package layout
 
 import (
 	"crypto/rand"
+	"sort"
 )
 
 // Doc is a JSON object from a layout document.
@@ -118,6 +119,58 @@ func Delete(doc Doc, x, y int) bool {
 		return false
 	}
 	return del(doc)
+}
+
+// isStatic reports whether n is placed by staticPosition (not anchored).
+func isStatic(n Doc) bool {
+	loc, _ := n["location"].(map[string]any)
+	if loc == nil || loc["anchor"] != nil {
+		return false
+	}
+	_, ok := loc["staticPosition"].(map[string]any)
+	return ok
+}
+
+// staticXY returns n's staticPosition, treating missing fields as 0.
+func staticXY(n Doc) (x, y float64) {
+	loc, _ := n["location"].(map[string]any)
+	sp, _ := loc["staticPosition"].(map[string]any)
+	x, _ = sp["x"].(float64)
+	y, _ = sp["y"].(float64)
+	return x, y
+}
+
+// SortReadingOrder puts statically placed items of every section in reading
+// order (row, then column). Buttons places static items with a cursor that
+// only moves forward through the items list: an item listed after one that
+// sits later on the grid is pushed to the next free cell after the cursor.
+// Items that are not static keep their slots in the list.
+func SortReadingOrder(doc Doc) {
+	items, _ := doc["items"].([]any)
+	var idx []int
+	var static []Doc
+	for i, it := range items {
+		m, ok := it.(map[string]any)
+		if !ok {
+			continue
+		}
+		SortReadingOrder(m)
+		if isStatic(m) {
+			idx = append(idx, i)
+			static = append(static, m)
+		}
+	}
+	sort.SliceStable(static, func(i, j int) bool {
+		xi, yi := staticXY(static[i])
+		xj, yj := staticXY(static[j])
+		if yi != yj {
+			return yi < yj
+		}
+		return xi < xj
+	})
+	for k, i := range idx {
+		items[i] = static[k]
+	}
 }
 
 // Content returns (and creates) the button's buttonContent map.
